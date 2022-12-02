@@ -1,7 +1,7 @@
 # RookieDB
 
-- [ ] project 0: Setup
-- [ ] project 1: SQL
+- [x] project 0: Setup
+- [x] project 1: SQL
 - [ ] project 2: B+ Trees
 - [ ] project 3: Joins and Query Optimization
 - [ ] project 4: Concurrency
