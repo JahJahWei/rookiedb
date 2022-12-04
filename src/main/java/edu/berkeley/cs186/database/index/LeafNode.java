@@ -162,6 +162,19 @@ class LeafNode extends BPlusNode {
     @Override
     public Optional<Pair<DataBox, Long>> put(DataBox key, RecordId rid) {
         // TODO(proj2): implement
+        keys.add(key);
+        rids.add(rid);
+        if (keys.size() > 2 * metadata.getOrder()) {
+            int splitPoint = keys.size() / 2;
+            List<DataBox> splitKeyList = keys.subList(splitPoint, keys.size());
+            List<RecordId> splitRecordList = rids.subList(splitPoint, rids.size());
+            LeafNode splitLeafNode = new LeafNode(metadata, bufferManager, splitKeyList,
+                    splitRecordList, rightSibling, treeContext);
+            long pageNum = splitLeafNode.getPage().getPageNum();
+            this.rightSibling = Optional.of(pageNum);
+
+            return Optional.of(new Pair<DataBox, Long>(keys.get(splitPoint), pageNum));
+        }
 
         return Optional.empty();
     }
