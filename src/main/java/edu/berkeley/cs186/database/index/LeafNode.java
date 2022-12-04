@@ -173,8 +173,12 @@ class LeafNode extends BPlusNode {
             long pageNum = splitLeafNode.getPage().getPageNum();
             this.rightSibling = Optional.of(pageNum);
 
+            sync();
+
             return Optional.of(new Pair<DataBox, Long>(keys.get(splitPoint), pageNum));
         }
+
+        sync();
 
         return Optional.empty();
     }
