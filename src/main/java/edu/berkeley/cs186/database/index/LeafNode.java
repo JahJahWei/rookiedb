@@ -163,7 +163,10 @@ class LeafNode extends BPlusNode {
     public Optional<Pair<DataBox, Long>> put(DataBox key, RecordId rid) {
         // TODO(proj2): implement
         keys.add(key);
+        Collections.sort(keys);
         rids.add(rid);
+        Collections.sort(rids);
+
         if (keys.size() > 2 * metadata.getOrder()) {
             int splitPoint = keys.size() / 2;
             List<DataBox> splitKeyList = keys.subList(splitPoint, keys.size());
@@ -430,5 +433,10 @@ class LeafNode extends BPlusNode {
     @Override
     public int hashCode() {
         return Objects.hash(page.getPageNum(), keys, rids, rightSibling);
+    }
+
+    public static void main(String[] args) {
+        List<String> list = Arrays.asList("1", "2", "3", "4");
+        List<String> list1 = list.subList(1, list.size());
     }
 }
