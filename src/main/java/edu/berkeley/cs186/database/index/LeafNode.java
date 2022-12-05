@@ -162,6 +162,10 @@ class LeafNode extends BPlusNode {
     @Override
     public Optional<Pair<DataBox, Long>> put(DataBox key, RecordId rid) {
         // TODO(proj2): implement
+        if (keys.contains(key)) {
+            throw new BPlusTreeException("Had contain same key");
+        }
+
         keys.add(key);
         Collections.sort(keys);
         rids.add(rid);
@@ -169,8 +173,14 @@ class LeafNode extends BPlusNode {
 
         if (keys.size() > 2 * metadata.getOrder()) {
             int splitPoint = keys.size() / 2;
+            DataBox splitDataBox = keys.get(splitPoint);
+
             List<DataBox> splitKeyList = keys.subList(splitPoint, keys.size());
             List<RecordId> splitRecordList = rids.subList(splitPoint, rids.size());
+
+            keys = keys.subList(0, splitPoint);
+            rids = rids.subList(0, splitPoint);
+
             LeafNode splitLeafNode = new LeafNode(metadata, bufferManager, splitKeyList,
                     splitRecordList, rightSibling, treeContext);
             long pageNum = splitLeafNode.getPage().getPageNum();
@@ -178,7 +188,7 @@ class LeafNode extends BPlusNode {
 
             sync();
 
-            return Optional.of(new Pair<DataBox, Long>(keys.get(splitPoint), pageNum));
+            return Optional.of(new Pair<DataBox, Long>(splitDataBox, pageNum));
         }
 
         sync();
