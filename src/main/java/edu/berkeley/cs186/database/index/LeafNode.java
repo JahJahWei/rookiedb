@@ -208,13 +208,19 @@ class LeafNode extends BPlusNode {
     @Override
     public void remove(DataBox key) {
         // TODO(proj2): implement
-        Iterator<DataBox> iterator = keys.iterator();
-        while (iterator.hasNext()) {
-            if (iterator.next().equals(key)) {
-                iterator.remove();
+        int flag = 0;
+        Iterator<DataBox> keysIterator = keys.iterator();
+        while (keysIterator.hasNext()) {
+            if (keysIterator.next().equals(key)) {
+                keysIterator.remove();
                 break;
             }
+            flag++;
         }
+
+        rids.remove(flag);
+
+        sync();
     }
 
     // Iterators ///////////////////////////////////////////////////////////////
