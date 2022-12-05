@@ -108,6 +108,36 @@ class InnerNode extends BPlusNode {
     @Override
     public Optional<Pair<DataBox, Long>> put(DataBox key, RecordId rid) {
         // TODO(proj2): implement
+        LeafNode leafNode = get(key);
+        Optional<Pair<DataBox, Long>> overflowNode = leafNode.put(key, rid);
+
+        if (overflowNode.isPresent()) {
+            DataBox overflowKey = overflowNode.get().getFirst();
+            keys.add(overflowKey);
+
+            int childrenIndex = keys.indexOf(overflowKey) + 1;
+            children.add(childrenIndex, overflowNode.get().getSecond());
+        }
+
+        if (keys.size() > 2 * metadata.getOrder()) {
+            int splitPoint = keys.size() / 2;
+            DataBox splitDataBox = keys.get(splitPoint);
+            List<DataBox> splitKeyList = keys.subList(splitPoint, keys.size());
+            keys = keys.subList(0, splitPoint);
+
+            int childrenSplitPoint = children.size() / 2;
+            List<Long> splitChildrenList = children.subList(childrenSplitPoint, children.size());
+            children = children.subList(0, childrenSplitPoint);
+
+            InnerNode innerNode = new InnerNode(metadata, bufferManager, splitKeyList, splitChildrenList, treeContext);
+            long pageNum = innerNode.getPage().getPageNum();
+
+            sync();
+
+            return Optional.of(new Pair<>(splitDataBox, pageNum));
+        }
+
+        sync();
 
         return Optional.empty();
     }
@@ -387,5 +417,15 @@ class InnerNode extends BPlusNode {
     @Override
     public int hashCode() {
         return Objects.hash(page.getPageNum(), keys, children);
+    }
+
+    public static void main(String[] args) {
+        List<Integer> list = Arrays.asList(1, 2, 3, 4);
+        List<Integer> list1 = list.subList(1, list.size());
+        List<Integer> list2 = list.subList(0, 1);
+
+        System.out.println(list);
+        System.out.println(list1);
+        System.out.println(list2);
     }
 }
