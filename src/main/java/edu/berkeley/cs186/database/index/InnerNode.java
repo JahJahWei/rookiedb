@@ -100,8 +100,9 @@ class InnerNode extends BPlusNode {
     public LeafNode getLeftmostLeaf() {
         assert(children.size() > 0);
         // TODO(proj2): implement
-
-        return null;
+        Long pageNum = children.get(0);
+        BPlusNode bPlusNode = BPlusNode.fromBytes(metadata, bufferManager, treeContext, pageNum);
+        return bPlusNode.getLeftmostLeaf();
     }
 
     // See BPlusNode.put.
