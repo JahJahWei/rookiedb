@@ -213,8 +213,7 @@ public class BPlusTree {
         LockUtil.ensureSufficientLockHeld(lockContext, LockType.NL);
 
         // TODO(proj2): Return a BPlusTreeIterator.
-
-        return Collections.emptyIterator();
+        return new BPlusTreeIterator();
     }
 
     /**
@@ -246,8 +245,7 @@ public class BPlusTree {
         LockUtil.ensureSufficientLockHeld(lockContext, LockType.NL);
 
         // TODO(proj2): Return a BPlusTreeIterator.
-
-        return Collections.emptyIterator();
+        return new BPlusTreeIterator();
     }
 
     /**
@@ -432,18 +430,43 @@ public class BPlusTree {
     // Iterator ////////////////////////////////////////////////////////////////
     private class BPlusTreeIterator implements Iterator<RecordId> {
         // TODO(proj2): Add whatever fields and constructors you want here.
+        private int next;
+        private LeafNode nextNode;
+
+        private BPlusTreeIterator() {
+            next = 0;
+            nextNode = root.getLeftmostLeaf();
+        }
 
         @Override
         public boolean hasNext() {
             // TODO(proj2): implement
-
-            return false;
+            return nextNode != null && nextNode.getRids().get(next) != null;
         }
 
         @Override
         public RecordId next() {
             // TODO(proj2): implement
+            List<RecordId> rids = nextNode.getRids();
+            if (next < rids.size() && rids.get(next) != null) {
+                next++;
+                if (next >= rids.size()) {
+                    if (nextNode.getRightSibling().isPresent()) {
+                        nextNode = nextNode.getRightSibling().get();
+                        next = 0;
+                    } else {
+                        nextNode = null;
+                        next = 0;
+                    }
+                }
+                return rids.get(next);
+            }
 
+            if (nextNode.getRightSibling().isPresent()) {
+                nextNode = nextNode.getRightSibling().get();
+                next = 0;
+                return next();
+            }
             throw new NoSuchElementException();
         }
     }
