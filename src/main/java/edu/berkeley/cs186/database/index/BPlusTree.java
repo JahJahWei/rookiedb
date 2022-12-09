@@ -146,11 +146,19 @@ public class BPlusTree {
         LockUtil.ensureSufficientLockHeld(lockContext, LockType.NL);
 
         // TODO(proj2): implement
+        if (root == null) {
+            return Optional.empty();
+        }
+
         LeafNode leafNode = root.get(key);
         return findLeafNode(Optional.of(leafNode), key);
     }
 
     private Optional<RecordId> findLeafNode(Optional<LeafNode> node, DataBox key) {
+        if (!node.isPresent()) {
+            return Optional.empty();
+        }
+
         LeafNode leafNode = node.get();
         List<DataBox> keys = node.get().getKeys();
         for (int i = 0; i < keys.size(); i++) {
@@ -266,7 +274,22 @@ public class BPlusTree {
         // Note: You should NOT update the root variable directly.
         // Use the provided updateRoot() helper method to change
         // the tree's root if the old root splits.
-        root.put(key, rid);
+        Optional<Pair<DataBox, Long>> overflowNode = root.put(key, rid);
+        if (overflowNode.isPresent()) {
+            List<DataBox> keys = new ArrayList<>();
+            List<Long> children = new ArrayList<>();
+
+            DataBox box = overflowNode.get().getFirst();
+            Long pageNum = overflowNode.get().getSecond();
+            Long oldPageNum = root.getPage().getPageNum();
+
+            keys.add(box);
+            children.add(oldPageNum);
+            children.add(pageNum);
+
+            InnerNode innerNode = new InnerNode(metadata, bufferManager, keys, children, lockContext);
+            updateRoot(innerNode);
+        }
     }
 
     /**
