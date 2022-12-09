@@ -4,6 +4,7 @@ import edu.berkeley.cs186.database.common.Buffer;
 import edu.berkeley.cs186.database.common.Pair;
 import edu.berkeley.cs186.database.concurrency.LockContext;
 import edu.berkeley.cs186.database.databox.DataBox;
+import edu.berkeley.cs186.database.databox.IntDataBox;
 import edu.berkeley.cs186.database.databox.Type;
 import edu.berkeley.cs186.database.memory.BufferManager;
 import edu.berkeley.cs186.database.memory.Page;
@@ -165,34 +166,40 @@ class LeafNode extends BPlusNode {
             throw new BPlusTreeException("Had contain same key");
         }
 
-        keys.add(key);
-        Collections.sort(keys);
-        rids.add(rid);
-        Collections.sort(rids);
+        try {
+            int index = 0;
+            while(index < keys.size()) {
+                if (key.compareTo(keys.get(index)) < 0) {
+                    break;
+                }
+                index++;
+            }
+            keys.add(index, key);
+            rids.add(index, rid);
 
-        if (keys.size() > 2 * metadata.getOrder()) {
-            int splitPoint = keys.size() / 2;
-            DataBox splitDataBox = keys.get(splitPoint);
+            if (keys.size() > 2 * metadata.getOrder()) {
+                int splitPoint = keys.size() / 2;
+                DataBox splitDataBox = keys.get(splitPoint);
 
-            List<DataBox> splitKeyList = keys.subList(splitPoint, keys.size());
-            List<RecordId> splitRecordList = rids.subList(splitPoint, rids.size());
+                List<DataBox> splitKeyList = keys.subList(splitPoint, keys.size());
+                List<RecordId> splitRecordList = rids.subList(splitPoint, rids.size());
 
-            keys = keys.subList(0, splitPoint);
-            rids = rids.subList(0, splitPoint);
+                keys = keys.subList(0, splitPoint);
+                rids = rids.subList(0, splitPoint);
 
-            LeafNode splitLeafNode = new LeafNode(metadata, bufferManager, splitKeyList,
-                    splitRecordList, rightSibling, treeContext);
-            long pageNum = splitLeafNode.getPage().getPageNum();
-            this.rightSibling = Optional.of(pageNum);
+                LeafNode splitLeafNode = new LeafNode(metadata, bufferManager, splitKeyList,
+                        splitRecordList, rightSibling, treeContext);
+                long pageNum = splitLeafNode.getPage().getPageNum();
+                this.rightSibling = Optional.of(pageNum);
 
+                return Optional.of(new Pair<DataBox, Long>(splitDataBox, pageNum));
+            }
+
+            return Optional.empty();
+
+        } finally {
             sync();
-
-            return Optional.of(new Pair<DataBox, Long>(splitDataBox, pageNum));
         }
-
-        sync();
-
-        return Optional.empty();
     }
 
     // See BPlusNode.bulkLoad.
@@ -256,7 +263,7 @@ class LeafNode extends BPlusNode {
 
     /** Returns the right sibling of this leaf, if it has one. */
     Optional<LeafNode> getRightSibling() {
-        if (!rightSibling.isPresent()) {
+        if (!rightSibling.isPresent() || rightSibling.get() == -1) {
             return Optional.empty();
         }
 
@@ -456,7 +463,9 @@ class LeafNode extends BPlusNode {
     }
 
     public static void main(String[] args) {
-        List<String> list = Arrays.asList("1", "2", "3", "4");
-        List<String> list1 = list.subList(1, list.size());
+        IntDataBox firstBox = new IntDataBox(10);
+        IntDataBox secondBox = new IntDataBox(2);
+
+        System.out.println(secondBox.compareTo(firstBox));
     }
 }
