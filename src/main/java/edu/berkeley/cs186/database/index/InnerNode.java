@@ -92,7 +92,7 @@ class InnerNode extends BPlusNode {
 
         Long pageNum = children.get(index);
 
-        return LeafNode.fromBytes(metadata, bufferManager, treeContext, pageNum);
+        return BPlusNode.fromBytes(metadata, bufferManager, treeContext, pageNum).get(key);
     }
 
     // See BPlusNode.getLeftmostLeaf.
@@ -114,19 +114,25 @@ class InnerNode extends BPlusNode {
 
         if (overflowNode.isPresent()) {
             DataBox overflowKey = overflowNode.get().getFirst();
-            keys.add(overflowKey);
 
-            int childrenIndex = keys.indexOf(overflowKey) + 1;
-            children.add(childrenIndex, overflowNode.get().getSecond());
+            int index = 0;
+            while(index < keys.size()) {
+                if (key.compareTo(keys.get(index)) < 0) {
+                    break;
+                }
+                index++;
+            }
+            keys.add(index, overflowKey);
+            children.add(index + 1, overflowNode.get().getSecond());
         }
 
         if (keys.size() > 2 * metadata.getOrder()) {
             int splitPoint = keys.size() / 2;
             DataBox splitDataBox = keys.get(splitPoint);
-            List<DataBox> splitKeyList = keys.subList(splitPoint, keys.size());
+            List<DataBox> splitKeyList = keys.subList(splitPoint + 1, keys.size());
             keys = keys.subList(0, splitPoint);
 
-            int childrenSplitPoint = children.size() / 2;
+            int childrenSplitPoint = splitPoint + 1;
             List<Long> splitChildrenList = children.subList(childrenSplitPoint, children.size());
             children = children.subList(0, childrenSplitPoint);
 
