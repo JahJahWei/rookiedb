@@ -253,7 +253,7 @@ public class BPlusTree {
         LockUtil.ensureSufficientLockHeld(lockContext, LockType.NL);
 
         // TODO(proj2): Return a BPlusTreeIterator.
-        return new BPlusTreeIterator();
+        return new BPlusTreeIterator(key);
     }
 
     /**
@@ -453,43 +453,42 @@ public class BPlusTree {
     // Iterator ////////////////////////////////////////////////////////////////
     private class BPlusTreeIterator implements Iterator<RecordId> {
         // TODO(proj2): Add whatever fields and constructors you want here.
-        private int next;
         private LeafNode nextNode;
+        private Iterator<RecordId> iterator;
+
+        private Optional<DataBox> key;
 
         private BPlusTreeIterator() {
-            next = 0;
             nextNode = root.getLeftmostLeaf();
+            iterator = nextNode.scanAll();
+            key = Optional.empty();
+        }
+
+        private BPlusTreeIterator(DataBox dataBox) {
+            nextNode = root.getLeftmostLeaf();
+            iterator = nextNode.scanGreaterEqual(dataBox);
+            key = Optional.of(dataBox);
         }
 
         @Override
         public boolean hasNext() {
             // TODO(proj2): implement
-            return nextNode != null && nextNode.getRids().get(next) != null;
+            return (iterator != null && iterator.hasNext()) || nextNode.getRightSibling().isPresent();
         }
 
         @Override
         public RecordId next() {
             // TODO(proj2): implement
-            List<RecordId> rids = nextNode.getRids();
-            if (next < rids.size() && rids.get(next) != null) {
-                next++;
-                if (next >= rids.size()) {
-                    if (nextNode.getRightSibling().isPresent()) {
-                        nextNode = nextNode.getRightSibling().get();
-                        next = 0;
-                    } else {
-                        nextNode = null;
-                        next = 0;
-                    }
+            if (hasNext()) {
+                if (iterator.hasNext()) {
+                    return iterator.next();
                 }
-                return rids.get(next);
-            }
 
-            if (nextNode.getRightSibling().isPresent()) {
                 nextNode = nextNode.getRightSibling().get();
-                next = 0;
+                iterator = nextNode.scanAll();
                 return next();
             }
+
             throw new NoSuchElementException();
         }
     }
