@@ -111,35 +111,15 @@ class InnerNode extends BPlusNode {
         Optional<Pair<DataBox, Long>> overflowNode = leafNode.put(key, rid);
 
         if (overflowNode.isPresent()) {
-            DataBox overflowKey = overflowNode.get().getFirst();
-
-            int index = 0;
-            while(index < keys.size()) {
-                if (key.compareTo(keys.get(index)) < 0) {
-                    break;
-                }
-                index++;
-            }
-            keys.add(index, overflowKey);
-            children.add(index + 1, overflowNode.get().getSecond());
+            insertNode(overflowNode, keys, children);
         }
 
         if (keys.size() > 2 * metadata.getOrder()) {
-            int splitPoint = keys.size() / 2;
-            DataBox splitDataBox = keys.get(splitPoint);
-            List<DataBox> splitKeyList = keys.subList(splitPoint + 1, keys.size());
-            keys = keys.subList(0, splitPoint);
-
-            int childrenSplitPoint = splitPoint + 1;
-            List<Long> splitChildrenList = children.subList(childrenSplitPoint, children.size());
-            children = children.subList(0, childrenSplitPoint);
-
-            InnerNode innerNode = new InnerNode(metadata, bufferManager, splitKeyList, splitChildrenList, treeContext);
-            long pageNum = innerNode.getPage().getPageNum();
+            Optional<Pair<DataBox, Long>> result = doSplit();
 
             sync();
 
-            return Optional.of(new Pair<>(splitDataBox, pageNum));
+            return result;
         }
 
         sync();
@@ -152,6 +132,21 @@ class InnerNode extends BPlusNode {
     public Optional<Pair<DataBox, Long>> bulkLoad(Iterator<Pair<DataBox, RecordId>> data,
             float fillFactor) {
         // TODO(proj2): implement
+        Optional<Pair<DataBox, Long>> overflowNode = bulkLoad(data, fillFactor);
+
+        if (overflowNode.isPresent()) {
+            insertNode(overflowNode, keys, children);
+        }
+
+        if (keys.size() > 2 * metadata.getOrder()) {
+            Optional<Pair<DataBox, Long>> result = doSplit();
+
+            sync();
+
+            return result;
+        }
+
+        sync();
 
         return Optional.empty();
     }
@@ -424,13 +419,40 @@ class InnerNode extends BPlusNode {
         return Objects.hash(page.getPageNum(), keys, children);
     }
 
-    public static void main(String[] args) {
-        List<Integer> list = Arrays.asList(1, 2, 3, 4);
-        List<Integer> list1 = list.subList(1, list.size());
-        List<Integer> list2 = list.subList(0, 1);
 
-        System.out.println(list);
-        System.out.println(list1);
-        System.out.println(list2);
+    private void insertNode(Optional<Pair<DataBox, Long>> node,
+                           List<DataBox> keys,
+                           List<Long> children) {
+        DataBox key = node.get().getFirst();
+        Long child = node.get().getSecond();
+
+        int index = 0;
+        while(index < keys.size()) {
+            if (key.compareTo(keys.get(index)) < 0) {
+                break;
+            }
+            index++;
+        }
+
+        keys.add(index, key);
+        children.add(index + 1, child);
     }
+
+    private Optional<Pair<DataBox, Long>> doSplit() {
+
+        int splitPoint = keys.size() / 2;
+        DataBox splitDataBox = keys.get(splitPoint);
+        List<DataBox> splitKeyList = keys.subList(splitPoint + 1, keys.size());
+        keys = keys.subList(0, splitPoint);
+
+        int childrenSplitPoint = splitPoint + 1;
+        List<Long> splitChildrenList = children.subList(childrenSplitPoint, children.size());
+        children = children.subList(0, childrenSplitPoint);
+
+        InnerNode innerNode = new InnerNode(metadata, bufferManager, splitKeyList, splitChildrenList, treeContext);
+        long pageNum = innerNode.getPage().getPageNum();
+
+        return Optional.of(new Pair<>(splitDataBox, pageNum));
+    }
+
 }
