@@ -167,15 +167,7 @@ class LeafNode extends BPlusNode {
         }
 
         try {
-            int index = 0;
-            while(index < keys.size()) {
-                if (key.compareTo(keys.get(index)) < 0) {
-                    break;
-                }
-                index++;
-            }
-            keys.add(index, key);
-            rids.add(index, rid);
+            insertNode(key, rid);
 
             if (keys.size() > 2 * metadata.getOrder()) {
                 int splitPoint = keys.size() / 2;
@@ -228,15 +220,7 @@ class LeafNode extends BPlusNode {
                 return Optional.of(new Pair<>(key, pageNum));
             }
 
-            int index = 0;
-            while(index < keys.size()) {
-                if (key.compareTo(keys.get(index)) < 0) {
-                    break;
-                }
-                index++;
-            }
-            keys.add(index, key);
-            rids.add(index, rid);
+            insertNode(key, rid);
         }
 
         sync();
@@ -494,10 +478,16 @@ class LeafNode extends BPlusNode {
         return Objects.hash(page.getPageNum(), keys, rids, rightSibling);
     }
 
-    public static void main(String[] args) {
-        IntDataBox firstBox = new IntDataBox(10);
-        IntDataBox secondBox = new IntDataBox(2);
-
-        System.out.println(secondBox.compareTo(firstBox));
+    private void insertNode(DataBox key, RecordId rid) {
+        int index = 0;
+        while(index < keys.size()) {
+            if (key.compareTo(keys.get(index)) < 0) {
+                break;
+            }
+            index++;
+        }
+        keys.add(index, key);
+        rids.add(index, rid);
     }
+
 }
