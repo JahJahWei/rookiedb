@@ -66,7 +66,6 @@ public class BNLJOperator extends JoinOperator {
             super();
             this.leftSourceIterator = getLeftSource().iterator();
             this.fetchNextLeftBlock();
-            if (leftBlockIterator.hasNext()) leftRecord = leftBlockIterator.next();
 
             this.rightSourceIterator = getRightSource().backtrackingIterator();
             this.rightSourceIterator.markNext();
@@ -89,7 +88,11 @@ public class BNLJOperator extends JoinOperator {
          */
         private void fetchNextLeftBlock() {
             // TODO(proj3_part1): implement
-            leftBlockIterator = getBlockIterator(leftSourceIterator, getSchema(), numBuffers - 2);
+            if (leftSourceIterator.hasNext()) {
+                leftBlockIterator = getBlockIterator(leftSourceIterator, getSchema(), numBuffers - 2);
+                leftBlockIterator.markNext();
+                leftRecord = leftBlockIterator.next();
+            }
         }
 
         /**
@@ -105,7 +108,10 @@ public class BNLJOperator extends JoinOperator {
          */
         private void fetchNextRightPage() {
             // TODO(proj3_part1): implement
-            rightPageIterator = getBlockIterator(rightSourceIterator, getSchema(), 1);
+            if (rightSourceIterator.hasNext()) {
+                rightPageIterator = getBlockIterator(rightSourceIterator, getSchema(), 1);
+                rightPageIterator.markNext();
+            }
         }
 
         /**
@@ -119,28 +125,24 @@ public class BNLJOperator extends JoinOperator {
         private Record fetchNextRecord() {
             // TODO(proj3_part1): implement
             while (true) {
-                if (this.rightPageIterator.hasNext()) {
-                    Record rightRecord = this.rightPageIterator.next();
+                if (rightPageIterator.hasNext()) {
+                    Record rightRecord = rightPageIterator.next();
                     if (compare(leftRecord, rightRecord) == 0) {
                         return leftRecord.concat(rightRecord);
                     }
-                } else if (this.leftBlockIterator.hasNext()) {
+                } else if (leftBlockIterator.hasNext()) {
                     leftRecord = this.leftBlockIterator.next();
                     rightPageIterator.reset();
-                } else {
+                } else if (rightSourceIterator.hasNext()){
                     fetchNextRightPage();
-                    if (this.rightPageIterator.hasNext()) {
-                        this.leftBlockIterator.reset();
-                        this.leftRecord = leftBlockIterator.next();
-                    } else {
-                        fetchNextLeftBlock();
-                        if (this.leftBlockIterator.hasNext()) {
-                            this.rightPageIterator.reset();
-                            this.leftRecord = this.leftBlockIterator.next();
-                        } else {
-                            return null;
-                        }
-                    }
+                    this.leftBlockIterator.reset();
+                    this.leftRecord = leftBlockIterator.next();
+                } else if (leftSourceIterator.hasNext()) {
+                    fetchNextLeftBlock();
+                    rightSourceIterator.reset();
+                    fetchNextRightPage();
+                } else {
+                    return null;
                 }
             }
         }
