@@ -66,6 +66,7 @@ public class BNLJOperator extends JoinOperator {
             super();
             this.leftSourceIterator = getLeftSource().iterator();
             this.fetchNextLeftBlock();
+            if (leftBlockIterator.hasNext()) leftRecord = leftBlockIterator.next();
 
             this.rightSourceIterator = getRightSource().backtrackingIterator();
             this.rightSourceIterator.markNext();
@@ -117,20 +118,29 @@ public class BNLJOperator extends JoinOperator {
          */
         private Record fetchNextRecord() {
             // TODO(proj3_part1): implement
-            if (leftRecord == null) {
-                return null;
-            }
-
             while (true) {
                 if (this.rightPageIterator.hasNext()) {
-                    Record rightRecord = rightPageIterator.next();
+                    Record rightRecord = this.rightPageIterator.next();
                     if (compare(leftRecord, rightRecord) == 0) {
                         return leftRecord.concat(rightRecord);
-
                     }
-                } else if (leftBlockIterator.hasNext()) {
-                    this.leftRecord = leftBlockIterator.next();
-                    this.rightPageIterator.reset();
+                } else if (this.leftBlockIterator.hasNext()) {
+                    leftRecord = this.leftBlockIterator.next();
+                    rightPageIterator.reset();
+                } else {
+                    fetchNextRightPage();
+                    if (this.rightPageIterator.hasNext()) {
+                        this.leftBlockIterator.reset();
+                        this.leftRecord = leftBlockIterator.next();
+                    } else {
+                        fetchNextLeftBlock();
+                        if (this.leftBlockIterator.hasNext()) {
+                            this.rightPageIterator.reset();
+                            this.leftRecord = this.leftBlockIterator.next();
+                        } else {
+                            return null;
+                        }
+                    }
                 }
             }
         }
