@@ -71,7 +71,20 @@ public class GHJOperator extends JoinOperator {
         // You may find the implementation in SHJOperator.java to be a good
         // starting point. You can use the static method HashFunc.hashDataBox
         // to get a hash value.
-        return;
+        for (Record record : records) {
+            DataBox columnValue;
+            if (left) {
+                columnValue = record.getValue(getLeftColumnIndex());
+            } else {
+                columnValue = record.getValue(getRightColumnIndex());
+            }
+            int hash = HashFunc.hashDataBox(columnValue, pass);
+            int partitionNum = hash % partitions.length;
+            if (partitionNum < 0)
+                partitionNum += partitions.length;
+            partitions[partitionNum].add(record);
+        }
+
     }
 
     /**
