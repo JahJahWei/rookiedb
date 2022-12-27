@@ -1,5 +1,6 @@
 package edu.berkeley.cs186.database.query.join;
 
+import edu.berkeley.cs186.database.Database;
 import edu.berkeley.cs186.database.TransactionContext;
 import edu.berkeley.cs186.database.common.HashFunc;
 import edu.berkeley.cs186.database.common.Pair;
@@ -125,6 +126,29 @@ public class GHJOperator extends JoinOperator {
         // You shouldn't refer to any variable starting with "left" or "right"
         // here, use the "build" and "probe" variables we set up for you.
         // Check out how SHJOperator implements this function if you feel stuck.
+        Map<DataBox, List<Record>> hashTable = new HashMap<>();
+
+        Iterator<Record> buildIterator = buildRecords.iterator();
+        while (buildIterator.hasNext()) {
+            Record buildRecord = buildIterator.next();
+            DataBox buildJoinValue = buildRecord.getValue(buildColumnIndex);
+            if (!hashTable.containsKey(buildJoinValue)) {
+                hashTable.put(buildJoinValue, new ArrayList<>());
+            }
+            hashTable.get(buildJoinValue).add(buildRecord);
+        }
+
+        Iterator<Record> probeIterator = probeRecords.iterator();
+        while (probeIterator.hasNext()) {
+            Record probeRecord = probeIterator.next();
+            DataBox probeJoinValue = probeRecord.getValue(probeColumnIndex);
+            if (!hashTable.containsKey(probeJoinValue)) continue;
+
+            for (Record record : hashTable.get(probeJoinValue)) {
+                Record joinRecord = record.concat(probeRecord);
+                joinedRecords.add(joinRecord);
+            }
+        }
     }
 
     /**
