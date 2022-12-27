@@ -178,6 +178,12 @@ public class GHJOperator extends JoinOperator {
             // TODO(proj3_part1): implement the rest of grace hash join
             // If you meet the conditions to run the build and probe you should
             // do so immediately. Otherwise you should make a recursive call.
+            if (leftPartitions[i].getNumPages() <= numBuffers - 2
+                    || rightPartitions[i].getNumPages() <= numBuffers - 2) {
+                buildAndProbe(leftPartitions[i], rightPartitions[i]);
+            } else {
+                run(leftPartitions[i], rightPartitions[i], pass + 1);
+            }
         }
     }
 
