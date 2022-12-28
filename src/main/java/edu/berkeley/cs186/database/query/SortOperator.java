@@ -163,7 +163,17 @@ public class SortOperator extends QueryOperator {
      */
     public List<Run> mergePass(List<Run> runs) {
         // TODO(proj3_part1): implement
-        return Collections.emptyList();
+        List<Run> result = new ArrayList<>();
+
+        int num = numBuffers - 1;
+        int i = 0;
+        while (i + num <= runs.size() + 1) {
+            List<Run> runList = runs.subList(i, Math.min(runs.size(), i + num));
+            result.add(mergeSortedRuns(runList));
+            i += num;
+        }
+
+        return result;
     }
 
     /**
