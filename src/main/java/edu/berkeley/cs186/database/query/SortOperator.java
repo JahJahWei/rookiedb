@@ -100,7 +100,7 @@ public class SortOperator extends QueryOperator {
     /**
      * Given a list of sorted runs, returns a new run that is the result of
      * merging the input runs. You should use a Priority Queue (java.util.PriorityQueue)
-     * to determine which record should be should be added to the output run
+     * to determine which record should be added to the output run
      * next.
      *
      * You are NOT allowed to have more than runs.size() records in your
@@ -115,7 +115,30 @@ public class SortOperator extends QueryOperator {
     public Run mergeSortedRuns(List<Run> runs) {
         assert (runs.size() <= this.numBuffers - 1);
         // TODO(proj3_part1): implement
-        return null;
+        Run result = new Run(transaction, getSchema());
+
+        List<BacktrackingIterator<Record>> backtrackingIterators = new ArrayList<>();
+
+        PriorityQueue<Pair<Record, Integer>> queue = new PriorityQueue<>(new RecordPairComparator());
+
+
+        for (Run run : runs) {
+            backtrackingIterators.add(run.iterator());
+        }
+
+        for (int i = 0; i < backtrackingIterators.size(); i++) {
+            BacktrackingIterator<Record> iterator = backtrackingIterators.get(i);
+            while (iterator.hasNext()) {
+                queue.add(new Pair<>(iterator.next(), i));
+            }
+        }
+
+        do {
+            Pair<Record, Integer> pair = queue.poll();
+            result.add(pair.getFirst());
+        } while (!queue.isEmpty());
+
+        return result;
     }
 
     /**
