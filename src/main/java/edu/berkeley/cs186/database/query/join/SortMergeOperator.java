@@ -8,6 +8,7 @@ import edu.berkeley.cs186.database.query.QueryOperator;
 import edu.berkeley.cs186.database.query.SortOperator;
 import edu.berkeley.cs186.database.table.Record;
 
+import javax.swing.text.Element;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
@@ -140,7 +141,38 @@ public class SortMergeOperator extends JoinOperator {
          */
         private Record fetchNextRecord() {
             // TODO(proj3_part1): implement
-            return null;
+            if (leftRecord == null) {
+                return null;
+            }
+
+            if (compare(leftRecord, rightRecord) == 0) {
+                Record result = leftRecord.concat(rightRecord);
+
+                if (!rightIterator.hasNext()) {
+                    if (leftIterator.hasNext()) {
+                        leftRecord = leftIterator.next();
+                    } else {
+                        leftRecord = null;
+                    }
+                    rightIterator.reset();
+                    rightRecord = rightIterator.next();
+                } else {
+                    rightRecord = rightIterator.next();
+                }
+
+                return result;
+            } else {
+                if (leftIterator.hasNext()) {
+                    leftRecord = leftIterator.next();
+                } else {
+                    leftRecord = null;
+                }
+
+                rightIterator.reset();
+                rightRecord = rightIterator.next();
+
+                return fetchNextRecord();
+            }
         }
 
         @Override
