@@ -663,6 +663,40 @@ public class QueryPlan {
         //      calculate the cheapest join with the new table (the one you
         //      fetched an operator for from pass1Map) and the previously joined
         //      tables. Then, update the result map if needed.
+        prevMap.forEach((tableNames, operator) -> {
+            for (JoinPredicate joinPredicate : joinPredicates) {
+                QueryOperator joinOperator;
+                Set<String> firstSet = new HashSet<>();
+                Set<String> secondSet = new HashSet<>(tableNames);
+
+                if (tableNames.contains(joinPredicate.leftTable) && !tableNames.contains(joinPredicate.rightTable)) {
+                    firstSet.add(joinPredicate.rightTable);
+                    joinOperator = minCostJoinType(operator,
+                            pass1Map.get(firstSet),
+                            joinPredicate.leftColumn,
+                            joinPredicate.rightColumn);
+                    secondSet.add(joinPredicate.rightTable);
+                } else if (tableNames.contains(joinPredicate.rightTable) && !tableNames.contains(joinPredicate.leftTable)) {
+                    firstSet.add(joinPredicate.leftTable);
+                    joinOperator = minCostJoinType(operator,
+                            pass1Map.get(firstSet),
+                            joinPredicate.rightColumn,
+                            joinPredicate.leftColumn);
+                    secondSet.add(joinPredicate.leftTable);
+                } else {
+                    continue;
+                }
+
+                if (result.containsKey(secondSet)) {
+                    if (result.get(secondSet).estimateIOCost() > joinOperator.estimateIOCost()) {
+                        result.put(secondSet, joinOperator);
+                    }
+                } else {
+                    result.put(secondSet, joinOperator);
+                }
+            }
+        });
+
         return result;
     }
 
