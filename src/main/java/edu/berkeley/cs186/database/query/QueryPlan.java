@@ -8,6 +8,7 @@ import edu.berkeley.cs186.database.query.join.BNLJOperator;
 import edu.berkeley.cs186.database.query.join.SNLJOperator;
 import edu.berkeley.cs186.database.table.Record;
 import edu.berkeley.cs186.database.table.Schema;
+import edu.berkeley.cs186.database.table.Table;
 
 import java.util.*;
 
@@ -574,10 +575,26 @@ public class QueryPlan {
      * minimum cost operator can be broken arbitrarily.
      */
     public QueryOperator minCostSingleAccess(String table) {
-        QueryOperator minOp = new SequentialScanOperator(this.transaction, table);
+        QueryOperator sequentialScanOperator = new SequentialScanOperator(this.transaction, table);
+        int sequentialScanIOCost = sequentialScanOperator.estimateIOCost();
 
         // TODO(proj3_part2): implement
-        return minOp;
+        List<Integer> eligibleIndexColumns = getEligibleIndexColumns(table);
+        int indexScanIOCost = Integer.MAX_VALUE;
+        IndexScanOperator indexScanOperator = null;
+        for (Integer eligibleIndexColumn : eligibleIndexColumns) {
+            SelectPredicate predicate = selectPredicates.get(eligibleIndexColumn);
+            IndexScanOperator operator = new IndexScanOperator(transaction,
+                    table,
+                    predicate.column,
+                    predicate.operator,
+                    predicate.value);
+            if (operator.estimateIOCost() < indexScanIOCost) {
+                indexScanOperator = operator;
+            }
+        }
+
+        return sequentialScanIOCost < indexScanIOCost ? sequentialScanOperator : indexScanOperator;
     }
 
     // Task 6: Join Selection //////////////////////////////////////////////////
