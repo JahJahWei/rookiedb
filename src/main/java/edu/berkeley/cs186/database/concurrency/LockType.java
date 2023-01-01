@@ -63,6 +63,11 @@ public enum LockType {
             throw new NullPointerException("null lock type");
         }
         // TODO(proj4_part1): implement
+        if (childLockType == NL || parentLockType == IX) {
+            return true;
+        } else if ((parentLockType == IS) && (childLockType == IS || childLockType == S || childLockType == NL)) {
+            return true;
+        }
 
         return false;
     }
