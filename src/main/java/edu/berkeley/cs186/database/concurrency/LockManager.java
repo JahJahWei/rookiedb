@@ -185,9 +185,24 @@ public class LockManager {
         // You may modify any part of this method. You are not required to keep all your
         // code within the given synchronized block and are allowed to move the
         // synchronized block elsewhere if you wish.
+        List<Lock> locks = getLocks(transaction);
+        locks.forEach(lock -> {
+            if (lock.name.equals(name)) {
+                throw new DuplicateLockRequestException("Duplicate lock request");
+            }
+        });
+
         boolean shouldBlock = false;
+        Lock lock = new Lock(name, lockType, transaction.getTransNum());
+        ResourceEntry resourceEntry = getResourceEntry(name);
+        shouldBlock = shouldBlock(resourceEntry, transaction, lockType);
+
         synchronized (this) {
-            
+            if (shouldBlock) {
+                resourceEntry.waitingQueue.add(new LockRequest(transaction, lock));
+            } else {
+                resourceEntry.locks.add(lock);
+            }
         }
         if (shouldBlock) {
             transaction.block();
@@ -255,6 +270,12 @@ public class LockManager {
     public synchronized LockType getLockType(TransactionContext transaction, ResourceName name) {
         // TODO(proj4_part1): implement
         ResourceEntry resourceEntry = getResourceEntry(name);
+        for (Lock lock : resourceEntry.locks) {
+            if (lock.name.equals(name) && lock.transactionNum == transaction.getTransNum()) {
+                return lock.lockType;
+            }
+        }
+
         return LockType.NL;
     }
 
@@ -290,5 +311,23 @@ public class LockManager {
      */
     public synchronized LockContext databaseContext() {
         return context("database");
+    }
+
+    private boolean shouldBlock(ResourceEntry entry,
+                                TransactionContext transaction,
+                                LockType lockType) {
+        for (LockRequest lockRequest : entry.waitingQueue) {
+            if (lockRequest.transaction.equals(transaction)) {
+                return true;
+            }
+        }
+
+        for (Lock resourceEntryLock : entry.locks) {
+            if (!LockType.compatible(resourceEntryLock.lockType, lockType)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
