@@ -59,7 +59,7 @@ public class LockManager {
          */
         public boolean checkCompatible(LockType lockType, long except) {
             // TODO(proj4_part1): implement
-            return false;
+            return LockType.compatible(lockType, getTransactionLockType(except));
         }
 
         /**
@@ -69,7 +69,13 @@ public class LockManager {
          */
         public void grantOrUpdateLock(Lock lock) {
             // TODO(proj4_part1): implement
-            return;
+            for (Lock grantedLock : locks) {
+                if (grantedLock.transactionNum == lock.transactionNum) {
+                    if (LockType.compatible(grantedLock.lockType, lock.lockType)) {
+                        grantedLock.name = lock.name;
+                    }
+                }
+            }
         }
 
         /**
@@ -87,7 +93,11 @@ public class LockManager {
          */
         public void addToQueue(LockRequest request, boolean addFront) {
             // TODO(proj4_part1): implement
-            return;
+            if (addFront) {
+                waitingQueue.offerFirst(request);
+            } else {
+                waitingQueue.add(request);
+            }
         }
 
         /**
@@ -107,7 +117,8 @@ public class LockManager {
          */
         public LockType getTransactionLockType(long transaction) {
             // TODO(proj4_part1): implement
-            return LockType.NL;
+            return transactionLocks.get(transaction).size() > 0
+                    ? transactionLocks.get(transaction).get(0).lockType : LockType.NL;
         }
 
         @Override
@@ -230,9 +241,8 @@ public class LockManager {
         // TODO(proj4_part1): implement
         // You may modify any part of this method.
         List<Lock> locks = getLocks(transaction);
-        if (locks.size() == 0 || locks.stream().noneMatch(lock -> lock.name.equals(name))) {
-            throw new NoLockHeldException("No lock held");
-        }
+
+        checkNoLockHeld(locks, name);
 
         ResourceEntry resourceEntry = getResourceEntry(name);
         synchronized (this) {
@@ -278,10 +288,36 @@ public class LockManager {
             throws DuplicateLockRequestException, NoLockHeldException, InvalidLockException {
         // TODO(proj4_part1): implement
         // You may modify any part of this method.
+        List<Lock> locks = getLocks(transaction);
+
+        checkDuplicateLockReq(locks, newLockType, name);
+        checkNoLockHeld(locks, name);
+        checkInvalidLock(locks, newLockType);
+
         boolean shouldBlock = false;
+        Lock lock = new Lock(name, newLockType, transaction.getTransNum());
+        ResourceEntry resourceEntry = getResourceEntry(name);
+        shouldBlock = shouldBlock(resourceEntry, transaction, newLockType);
+
         synchronized (this) {
-            
+            if (shouldBlock) {
+                resourceEntry.waitingQueue.offerFirst(new LockRequest(transaction, lock));
+            } else {
+                for (Lock resourceEntryLock : resourceEntry.locks) {
+                    if (resourceEntryLock.name.equals(name)) {
+                        resourceEntryLock.lockType = newLockType;
+                    }
+                }
+
+                List<Lock> transactionLockList = transactionLocks.get(transaction.getTransNum());
+                for (Lock transactionLock : transactionLockList) {
+                    if (transactionLock.name.equals(name)) {
+                        transactionLock.lockType = newLockType;
+                    }
+                }
+            }
         }
+
         if (shouldBlock) {
             transaction.block();
         }
@@ -354,4 +390,26 @@ public class LockManager {
 
         return false;
     }
+
+    private void checkDuplicateLockReq(List<Lock> locks, LockType lockType, ResourceName name) {
+        if (locks.stream().anyMatch(lock -> lock.name.equals(name) && lock.lockType.equals(lockType))) {
+            throw new DuplicateLockRequestException("Duplicate lock request");
+        }
+    }
+
+    private void checkNoLockHeld(List<Lock> locks, ResourceName name) {
+        if (locks.size() == 0 || locks.stream().noneMatch(lock -> lock.name.equals(name))) {
+            throw new NoLockHeldException("No lock held");
+        }
+    }
+
+    private void checkInvalidLock(List<Lock> locks, LockType newLockType) {
+        for (Lock lock : locks) {
+            if (LockType.substitutable(newLockType, lock.lockType) && !newLockType.equals(lock.lockType)) {
+                continue;
+            }
+            throw new InvalidLockException("Invalid lock");
+        }
+    }
+
 }
