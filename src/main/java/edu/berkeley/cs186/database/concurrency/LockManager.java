@@ -202,6 +202,12 @@ public class LockManager {
                 resourceEntry.waitingQueue.add(new LockRequest(transaction, lock));
             } else {
                 resourceEntry.locks.add(lock);
+                if (locks.size() == 0) {
+                    locks.add(lock);
+                    transactionLocks.put(transaction.getTransNum(), locks);
+                } else {
+                    locks.add(lock);
+                }
             }
         }
         if (shouldBlock) {
@@ -223,8 +229,26 @@ public class LockManager {
             throws NoLockHeldException {
         // TODO(proj4_part1): implement
         // You may modify any part of this method.
+        List<Lock> locks = getLocks(transaction);
+        if (locks.size() == 0 || locks.stream().noneMatch(lock -> lock.name.equals(name))) {
+            throw new NoLockHeldException("No lock held");
+        }
+
+        ResourceEntry resourceEntry = getResourceEntry(name);
         synchronized (this) {
-            
+            for (LockRequest lockRequest : resourceEntry.waitingQueue) {
+                if (lockRequest.lock.transactionNum == transaction.getTransNum()
+                        && lockRequest.lock.name.equals(name)) {
+                    resourceEntry.waitingQueue.remove(lockRequest);
+                }
+            }
+
+            while (resourceEntry.locks.iterator().hasNext()) {
+                Lock lock = resourceEntry.locks.iterator().next();
+                if (lock.name.equals(name) && lock.transactionNum == transaction.getTransNum()) {
+                    resourceEntry.locks.remove(lock);
+                }
+            }
         }
     }
 
