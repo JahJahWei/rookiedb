@@ -100,7 +100,7 @@ public class LockContext {
                 && !LockType.canBeParentLock(parent.lockman.getLockType(transaction, parent.name), lockType)) {
             throw new InvalidLockException("Invalid lock");
         }
-        lockman.acquire(transaction, getResourceName(), lockType);
+        lockman.acquire(transaction, name, lockType);
     }
 
     /**
@@ -117,8 +117,7 @@ public class LockContext {
     public void release(TransactionContext transaction)
             throws NoLockHeldException, InvalidLockException {
         // TODO(proj4_part2): implement
-
-        return;
+        lockman.release(transaction, name);
     }
 
     /**
