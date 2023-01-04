@@ -11,6 +11,14 @@ public enum LockType {
     SIX, // shared intention exclusive
     NL;  // no lock held
 
+    private static final boolean[][] MATRIX = {
+            {true, true, true, true, false},
+            {true, true, false, false, false},
+            {true, false, true, false, false},
+            {true, false, false, false, false},
+            {false, false, false, false, false}
+    };
+
     /**
      * This method checks whether lock types A and B are compatible with
      * each other. If a transaction can hold lock type A on a resource
@@ -26,13 +34,7 @@ public enum LockType {
             return true;
         }
 
-        if ((a == S || a == IS) && (b == S || b == IS)) {
-            return true;
-        } else if ((a == IS || a == IX) && (b == IS || b == IX)) {
-            return true;
-        }
-
-        return false;
+        return MATRIX[getIndex(a)][getIndex(b)];
     }
 
     /**
@@ -113,6 +115,16 @@ public enum LockType {
         case NL: return "NL";
         default: throw new UnsupportedOperationException("bad lock type");
         }
+    }
+
+    private static int getIndex(LockType type) {
+        if (type == IS) return 0;
+        if (type == IX) return 1;
+        if (type == S) return 2;
+        if (type == SIX) return 3;
+        if (type == X) return 4;
+
+        return -1;
     }
 }
 
