@@ -132,7 +132,7 @@ public class LockManager {
             // TODO(proj4_part1): implement
             while (requests.hasNext()) {
                 LockRequest lockRequest = requests.next();
-                if (!checkCompatible(lockRequest.lock.lockType, lockRequest.transaction.getTransNum())) {
+                if (!checkCompatible(lockRequest.lock.lockType, lockRequest.lock.transactionNum)) {
                     break;
                 } else {
                     if (LockType.substitutable(lockRequest.lock.lockType,
@@ -246,8 +246,8 @@ public class LockManager {
         synchronized (this) {
             ResourceEntry resourceEntry = getResourceEntry(name);
 
-            if (resourceEntry.checkCompatible(lockType, transaction.getTransNum())
-                    && !resourceEntry.waitingQueue.isEmpty()) {
+            if (!resourceEntry.checkCompatible(lockType, transaction.getTransNum())
+                    || !resourceEntry.waitingQueue.isEmpty()) {
                 shouldBlock = true;
                 resourceEntry.addToQueue(new LockRequest(transaction, lock), false);
             } else {
@@ -280,9 +280,8 @@ public class LockManager {
 
         Lock lock = new Lock(name, getLockType(transaction, name), transaction.getTransNum());
 
-        ResourceEntry resourceEntry = getResourceEntry(name);
-
         synchronized (this) {
+            ResourceEntry resourceEntry = getResourceEntry(name);
             resourceEntry.releaseLock(lock);
         }
 
