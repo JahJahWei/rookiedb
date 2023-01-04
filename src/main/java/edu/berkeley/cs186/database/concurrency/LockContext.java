@@ -96,8 +96,11 @@ public class LockContext {
     public void acquire(TransactionContext transaction, LockType lockType)
             throws InvalidLockException, DuplicateLockRequestException {
         // TODO(proj4_part2): implement
-
-        return;
+        if (parent != null
+                && !LockType.canBeParentLock(parent.lockman.getLockType(transaction, parent.name), lockType)) {
+            throw new InvalidLockException("Invalid lock");
+        }
+        lockman.acquire(transaction, getResourceName(), lockType);
     }
 
     /**
