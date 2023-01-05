@@ -209,10 +209,41 @@ public class LockManager {
         // You may modify any part of this method. You are not required to keep
         // all your code within the given synchronized block and are allowed to
         // move the synchronized block elsewhere if you wish.
-        boolean shouldBlock = false;
-        synchronized (this) {
-            
+        if (!getLockType(transaction, name).equals(LockType.NL) && !releaseNames.contains(name)) {
+            throw new DuplicateLockRequestException("Duplicate lock request");
         }
+
+        boolean shouldBlock = false;
+
+        Lock lock = new Lock(name, lockType, transaction.getTransNum());
+
+        synchronized (this) {
+            ResourceEntry resourceEntry = getResourceEntry(name);
+
+            Map<ResourceName, Lock> transactionsMap = new HashMap<>();
+            List<Lock> transactionLocks = getLocks(transaction);
+            for (Lock transactionLock : transactionLocks) {
+                transactionsMap.put(transactionLock.name, transactionLock);
+            }
+            if (releaseNames.stream().anyMatch(releaseName -> !transactionsMap.containsKey(releaseName))) {
+                throw new NoLockHeldException("No lock held");
+            }
+
+            if (!resourceEntry.checkCompatible(lockType, transaction.getTransNum())) {
+                shouldBlock = true;
+                resourceEntry.addToQueue(new LockRequest(transaction, lock), true);
+            } else {
+                resourceEntry.grantOrUpdateLock(lock);
+
+                for (ResourceName releaseName : releaseNames) {
+                    if (!releaseName.equals(name)) {
+                        Lock l = transactionsMap.get(releaseName);
+                        getResourceEntry(releaseName).releaseLock(l);
+                    }
+                }
+            }
+        }
+
         if (shouldBlock) {
             transaction.block();
         }
