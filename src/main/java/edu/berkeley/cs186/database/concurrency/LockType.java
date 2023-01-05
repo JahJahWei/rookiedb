@@ -81,19 +81,23 @@ public enum LockType {
      * the S lock allowed it to do).
      */
     public static boolean substitutable(LockType substitute, LockType required) {
+        // TODO(proj4_part1): implement
         if (required == null || substitute == null) {
             throw new NullPointerException("null lock type");
         }
-        // TODO(proj4_part1): implement
-        if ((substitute == NL && required == NL)
-                || (substitute == X && required == X)
-                || (substitute == IX && (required == IX || required == IS))
-                || (substitute == IS && required == IS)) {
-            return true;
-        } else if (required == S && (substitute == S || substitute == SIX || substitute == X)) {
-            return true;
+        if (substitute == required || required == LockType.NL) { return true; }
+        if (required == S) {
+            return substitute == SIX || substitute == X;
         }
-
+        if (required == IS) {
+            return substitute == SIX || substitute == IX || substitute == S || substitute == X;
+        }
+        if (required == IX) {
+            return substitute == SIX || substitute == X;
+        }
+        if (required == SIX) {
+            return substitute == X;
+        }
         return false;
     }
 
