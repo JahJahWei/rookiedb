@@ -142,8 +142,15 @@ public class LockContext {
     public void promote(TransactionContext transaction, LockType newLockType)
             throws DuplicateLockRequestException, NoLockHeldException, InvalidLockException {
         // TODO(proj4_part2): implement
+        LockType lockType = lockman.getLockType(transaction, name);
+        if (lockType.equals(newLockType)) {
+            throw new DuplicateLockRequestException("Duplicate lock");
+        }
+        if (lockType.equals(LockType.NL)) {
+            throw new NoLockHeldException("No lock held");
+        }
 
-        return;
+        lockman.promote(transaction, name, newLockType);
     }
 
     /**
