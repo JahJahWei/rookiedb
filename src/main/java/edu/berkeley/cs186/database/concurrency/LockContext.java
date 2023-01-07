@@ -101,6 +101,8 @@ public class LockContext {
             throw new InvalidLockException("Invalid lock");
         }
         lockman.acquire(transaction, name, lockType);
+
+        recursiveAddNumChildLocks(transaction, parent);
     }
 
     /**
@@ -319,5 +321,15 @@ public class LockContext {
     public String toString() {
         return "LockContext(" + name.toString() + ")";
     }
+
+    private void recursiveAddNumChildLocks(TransactionContext transaction, LockContext parent) {
+        if (parent == null) return;
+
+        parent.numChildLocks.put(transaction.getTransNum(),
+                parent.numChildLocks.getOrDefault(transaction.getTransNum(), 0) + 1);
+
+        recursiveAddNumChildLocks(transaction, parent.parent);
+    }
+
 }
 
