@@ -188,6 +188,11 @@ public class LockContext {
      */
     public void escalate(TransactionContext transaction) throws NoLockHeldException {
         // TODO(proj4_part2): implement
+        LockType lockType = lockman.getLockType(transaction, name);
+        if (lockType.equals(LockType.NL)) {
+            throw new NoLockHeldException("No lock held");
+        }
+
 
         return;
     }
@@ -240,7 +245,7 @@ public class LockContext {
      */
     private boolean hasSIXAncestor(TransactionContext transaction) {
         // TODO(proj4_part2): implement
-        return false;
+        return parent.lockman.getLockType(transaction, name).equals(LockType.SIX);
     }
 
     /**
@@ -252,7 +257,17 @@ public class LockContext {
      */
     private List<ResourceName> sisDescendants(TransactionContext transaction) {
         // TODO(proj4_part2): implement
-        return new ArrayList<>();
+        List<ResourceName> resourceNames = new ArrayList<>();
+
+        children.forEach((key, lockContext) -> {
+            LockType lockType = lockContext.lockman.getLockType(transaction, name);
+            if (lockType.equals(LockType.IS)
+                    || lockType.equals(LockType.S)) {
+                resourceNames.add(lockContext.name);
+            }
+        });
+
+        return resourceNames;
     }
 
     /**
