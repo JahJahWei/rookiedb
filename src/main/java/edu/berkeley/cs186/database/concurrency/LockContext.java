@@ -119,7 +119,12 @@ public class LockContext {
     public void release(TransactionContext transaction)
             throws NoLockHeldException, InvalidLockException {
         // TODO(proj4_part2): implement
+        if (lockman.getLockType(transaction, name).equals(LockType.NL)) {
+            throw new NoLockHeldException("No lock held");
+        }
+
         lockman.release(transaction, name);
+        recursiveDeleteNumChildLocks(transaction, parent);
     }
 
     /**
@@ -329,6 +334,17 @@ public class LockContext {
                 parent.numChildLocks.getOrDefault(transaction.getTransNum(), 0) + 1);
 
         recursiveAddNumChildLocks(transaction, parent.parent);
+    }
+
+    private void recursiveDeleteNumChildLocks(TransactionContext transaction, LockContext parent) {
+        if (parent == null) return;
+
+        Integer numChildLocks = parent.numChildLocks.getOrDefault(transaction.getTransNum(), 0);
+        if (numChildLocks == 0) return;
+
+        parent.numChildLocks.put(transaction.getTransNum(), numChildLocks - 1);
+
+        recursiveDeleteNumChildLocks(transaction, parent.parent);
     }
 
 }
