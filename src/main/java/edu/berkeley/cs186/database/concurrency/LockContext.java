@@ -96,6 +96,8 @@ public class LockContext {
     public void acquire(TransactionContext transaction, LockType lockType)
             throws InvalidLockException, DuplicateLockRequestException {
         // TODO(proj4_part2): implement
+        if (readonly) throw new UnsupportedOperationException("Unsupported operation");
+
         if (parent != null
                 && !LockType.canBeParentLock(parent.lockman.getLockType(transaction, parent.name), lockType)) {
             throw new InvalidLockException("Invalid lock");
@@ -119,6 +121,8 @@ public class LockContext {
     public void release(TransactionContext transaction)
             throws NoLockHeldException, InvalidLockException {
         // TODO(proj4_part2): implement
+        if (readonly) throw new UnsupportedOperationException("Unsupported operation");
+
         if (lockman.getLockType(transaction, name).equals(LockType.NL)) {
             throw new NoLockHeldException("No lock held");
         }
@@ -149,6 +153,8 @@ public class LockContext {
     public void promote(TransactionContext transaction, LockType newLockType)
             throws DuplicateLockRequestException, NoLockHeldException, InvalidLockException {
         // TODO(proj4_part2): implement
+        if (readonly) throw new UnsupportedOperationException("Unsupported operation");
+
         LockType lockType = lockman.getLockType(transaction, name);
         if (lockType.equals(newLockType)) {
             throw new DuplicateLockRequestException("Duplicate lock");
