@@ -195,13 +195,35 @@ public class LockContext {
      */
     public void escalate(TransactionContext transaction) throws NoLockHeldException {
         // TODO(proj4_part2): implement
+        if (readonly) throw new UnsupportedOperationException("Unsupported operation");
+
         LockType lockType = lockman.getLockType(transaction, name);
         if (lockType.equals(LockType.NL)) {
             throw new NoLockHeldException("No lock held");
         }
+        if (lockType.equals(LockType.S) || lockType.equals(LockType.X)) {
+            return;
+        }
 
+        List<ResourceName> resourceNames = new ArrayList<>();
+        List<LockContext> lockContexts = new ArrayList<>();
+        children.forEach((resourceName, lockContext) -> {
+            ResourceName name;
+            if (lockContext.parent != null) {
+                name = new ResourceName(resourceName);
+            } else {
+                name = new ResourceName(lockContext.parent.name, resourceName);
+            }
+            resourceNames.add(name);
+            lockContexts.add(lockContext);
+        });
 
-        return;
+        if (lockType.equals(LockType.IS)) {
+            lockman.acquireAndRelease(transaction, name, LockType.S, resourceNames);
+            for (LockContext lockContext : lockContexts) {
+                lockContext.recursiveDeleteNumChildLocks(transaction, lockContext.parent);
+            }
+        }
     }
 
     /**
