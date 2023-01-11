@@ -230,6 +230,13 @@ public class LockContext {
                 lockContext.recursiveDeleteNumChildLocks(transaction, lockContext.parent);
             }
         }
+
+        if (lockType.equals(LockType.IX) || lockType.equals(LockType.SIX)) {
+            lockman.acquireAndRelease(transaction, name, LockType.X, resourceNames);
+            for (LockContext lockContext : lockContexts) {
+                lockContext.recursiveDeleteNumChildLocks(transaction, lockContext.parent);
+            }
+        }
     }
 
     /**
