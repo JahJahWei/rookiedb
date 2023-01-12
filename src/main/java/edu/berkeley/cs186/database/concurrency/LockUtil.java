@@ -1,6 +1,8 @@
 package edu.berkeley.cs186.database.concurrency;
 
 import edu.berkeley.cs186.database.TransactionContext;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * LockUtil is a declarative layer which simplifies multigranularity lock
@@ -37,12 +39,54 @@ public class LockUtil {
         if (transaction == null || lockContext == null) return;
 
         // You may find these variables useful
-        LockContext parentContext = lockContext.parentContext();
         LockType effectiveLockType = lockContext.getEffectiveLockType(transaction);
         LockType explicitLockType = lockContext.getExplicitLockType(transaction);
 
         // TODO(proj4_part2): implement
-        return;
+        if (LockType.substitutable(effectiveLockType, requestType)) return;
+
+        if (requestType.equals(LockType.S)) {
+            LockContext parentContext = lockContext.parentContext();
+
+            List<LockContext> parents = new ArrayList<>();
+            while (parentContext.parent != null) {
+                parents.add(parentContext);
+                parentContext = parentContext.parent;
+            }
+
+            parents.stream()
+                    .filter(context -> context.getExplicitLockType(transaction).equals(LockType.NL))
+                    .forEach(context -> {
+                        context.acquire(transaction, LockType.IS);
+            });
+
+            if (explicitLockType.equals(LockType.NL)) {
+                lockContext.acquire(transaction, LockType.S);
+            } else if (explicitLockType.equals((LockType.IS))) {
+                lockContext.escalate(transaction);
+            } else {
+                lockContext.promote(transaction, LockType.SIX);
+            }
+        } else {
+            LockContext parentContext = lockContext.parentContext();
+
+            List<LockContext> parents = new ArrayList<>();
+            while (parentContext.parent != null) {
+                parents.add(parentContext);
+                parentContext = parentContext.parent;
+            }
+
+            parents.forEach(parent -> {
+                LockType parentExplicitLockType = parent.getExplicitLockType(transaction);
+                if (parentExplicitLockType.equals(LockType.NL)) {
+                    parent.acquire(transaction, LockType.IX);
+                } else if (parentExplicitLockType.equals(LockType.IS)) {
+                    parent.promote(transaction, LockType.IX);
+                } else if (parentExplicitLockType.equals(LockType.S)) {
+                    parent.promote(transaction, LockType.SIX);
+                }
+            });
+        }
     }
 
     // TODO(proj4_part2) add any helper methods you want
