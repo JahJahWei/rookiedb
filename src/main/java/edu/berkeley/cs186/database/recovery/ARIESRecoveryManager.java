@@ -119,9 +119,14 @@ public class ARIESRecoveryManager implements RecoveryManager {
     public long abort(long transNum) {
         // TODO(proj5): implement
         TransactionTableEntry transactionTableEntry = transactionTable.get(transNum);
+        long lsn = transactionTableEntry.lastLSN;
+
+        LogRecord logRecord = logManager.fetchLogRecord(lsn);
+        logManager.appendToLog(logRecord);
+        logManager.flushToLSN(lsn);
         transactionTableEntry.transaction.setStatus(Transaction.Status.ABORTING);
 
-        return transactionTableEntry.lastLSN;
+        return lsn;
     }
 
     /**
