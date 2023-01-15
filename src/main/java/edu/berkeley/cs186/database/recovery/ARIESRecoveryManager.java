@@ -93,7 +93,16 @@ public class ARIESRecoveryManager implements RecoveryManager {
     @Override
     public long commit(long transNum) {
         // TODO(proj5): implement
-        return -1L;
+        TransactionTableEntry transactionTableEntry = transactionTable.get(transNum);
+        long lsn = transactionTableEntry.lastLSN;
+
+        LogRecord logRecord = logManager.fetchLogRecord(lsn);
+        logManager.appendToLog(logRecord);
+        logManager.flushToLSN(lsn);
+
+        transactionTableEntry.transaction.setStatus(Transaction.Status.COMMITTING);
+
+        return lsn;
     }
 
     /**
