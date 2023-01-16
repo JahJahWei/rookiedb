@@ -144,7 +144,15 @@ public class ARIESRecoveryManager implements RecoveryManager {
     @Override
     public long end(long transNum) {
         // TODO(proj5): implement
-        return -1L;
+        TransactionTableEntry entry = transactionTable.get(transNum);
+        if (entry.transaction.getStatus().equals(Transaction.Status.ABORTING)) {
+            rollbackToLSN(transNum, entry.lastLSN);
+        }
+
+        transactionTable.remove(transNum);
+        entry.transaction.setStatus(Transaction.Status.COMMITTING);
+
+        return logManager.appendToLog(new EndTransactionLogRecord(transNum, entry.lastLSN));
     }
 
     /**
