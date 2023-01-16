@@ -172,6 +172,11 @@ public class ARIESRecoveryManager implements RecoveryManager {
         // back from the next record that hasn't yet been undone.
         long currentLSN = lastRecord.getUndoNextLSN().orElse(lastRecordLSN);
         // TODO(proj5) implement the rollback logic described above
+        if (lastRecord.isUndoable()) {
+            LogRecord undoLogRecord = lastRecord.undo(currentLSN);
+            logManager.appendToLog(undoLogRecord);
+            undoLogRecord.redo(this, diskSpaceManager, bufferManager);
+        }
     }
 
     /**
