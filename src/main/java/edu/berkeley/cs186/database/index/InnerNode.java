@@ -107,24 +107,19 @@ class InnerNode extends BPlusNode {
     @Override
     public Optional<Pair<DataBox, Long>> put(DataBox key, RecordId rid) {
         // TODO(proj2): implement
-        LeafNode leafNode = get(key);
-        Optional<Pair<DataBox, Long>> overflowNode = leafNode.put(key, rid);
+        BPlusNode child = getChild(numLessThanEqual(key, keys));
+        child.put(key, rid).ifPresent(node -> {
+            insertNode(node, keys, children);
+        });
 
-        if (overflowNode.isPresent()) {
-            insertNode(overflowNode, keys, children);
-        }
-
+        Optional<Pair<DataBox, Long>> result = Optional.empty();
         if (keys.size() > 2 * metadata.getOrder()) {
-            Optional<Pair<DataBox, Long>> result = doSplit();
-
-            sync();
-
-            return result;
+            result = doSplit();
         }
 
         sync();
 
-        return Optional.empty();
+        return result;
     }
 
     // See BPlusNode.bulkLoad.
@@ -132,23 +127,22 @@ class InnerNode extends BPlusNode {
     public Optional<Pair<DataBox, Long>> bulkLoad(Iterator<Pair<DataBox, RecordId>> data,
             float fillFactor) {
         // TODO(proj2): implement
-        Optional<Pair<DataBox, Long>> overflowNode = bulkLoad(data, fillFactor);
-
-        if (overflowNode.isPresent()) {
-            insertNode(overflowNode, keys, children);
+        Optional<Pair<DataBox, Long>> result = Optional.empty();
+        while (data.hasNext() && keys.size() <= metadata.getOrder() * 2) {
+            getChild(keys.size() - 1).bulkLoad(data, fillFactor).ifPresent(node -> insertNode(node, keys, children));
         }
 
         if (keys.size() > 2 * metadata.getOrder()) {
-            Optional<Pair<DataBox, Long>> result = doSplit();
+            List<DataBox> subKeys = keys.subList(metadata.getOrder() + 1, keys.size());
+            List<Long> subChildrens = children.subList(metadata.getOrder() + 1, children.size());
+            InnerNode innerNode = new InnerNode(metadata, bufferManager, subKeys, subChildrens, treeContext);
 
-            sync();
-
-            return result;
+            result = Optional.of(new Pair<>(keys.get(metadata.getOrder()), innerNode.getPage().getPageNum()));
         }
 
         sync();
 
-        return Optional.empty();
+        return result;
     }
 
     // See BPlusNode.remove.
@@ -419,14 +413,12 @@ class InnerNode extends BPlusNode {
         return Objects.hash(page.getPageNum(), keys, children);
     }
 
-
-    private void insertNode(Optional<Pair<DataBox, Long>> node,
-                           List<DataBox> keys,
-                           List<Long> children) {
-        DataBox key = node.get().getFirst();
-        Long child = node.get().getSecond();
+    private void insertNode(Pair<DataBox, Long> node, List<DataBox> keys, List<Long> children) {
+        DataBox key = node.getFirst();
+        Long child = node.getSecond();
 
         int index = 0;
+
         while(index < keys.size()) {
             if (key.compareTo(keys.get(index)) < 0) {
                 break;

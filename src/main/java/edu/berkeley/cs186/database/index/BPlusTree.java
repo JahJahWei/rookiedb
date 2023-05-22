@@ -274,22 +274,7 @@ public class BPlusTree {
         // Note: You should NOT update the root variable directly.
         // Use the provided updateRoot() helper method to change
         // the tree's root if the old root splits.
-        Optional<Pair<DataBox, Long>> overflowNode = root.put(key, rid);
-        if (overflowNode.isPresent()) {
-            List<DataBox> keys = new ArrayList<>();
-            List<Long> children = new ArrayList<>();
-
-            DataBox box = overflowNode.get().getFirst();
-            Long pageNum = overflowNode.get().getSecond();
-            Long oldPageNum = root.getPage().getPageNum();
-
-            keys.add(box);
-            children.add(oldPageNum);
-            children.add(pageNum);
-
-            InnerNode innerNode = new InnerNode(metadata, bufferManager, keys, children, lockContext);
-            updateRoot(innerNode);
-        }
+        root.put(key, rid).ifPresent(this::replaceRoot);
     }
 
     /**
@@ -319,7 +304,9 @@ public class BPlusTree {
         // Note: You should NOT update the root variable directly.
         // Use the provided updateRoot() helper method to change
         // the tree's root if the old root splits.
-        bulkLoad(data, fillFactor);
+        while (data.hasNext()) {
+            root.bulkLoad(data, fillFactor).ifPresent(this::replaceRoot);
+        }
     }
 
     /**
@@ -490,5 +477,22 @@ public class BPlusTree {
 
             throw new NoSuchElementException();
         }
+    }
+
+    private void replaceRoot(Pair<DataBox, Long> overflowNode) {
+        List<DataBox> keys = new ArrayList<>();
+        List<Long> children = new ArrayList<>();
+
+        DataBox dataBox = overflowNode.getFirst();
+        Long pageNum = overflowNode.getSecond();
+        Long oldPageNum = root.getPage().getPageNum();
+
+        keys.add(dataBox);
+        children.add(oldPageNum);
+        children.add(pageNum);
+
+        InnerNode innerNode = new InnerNode(metadata, bufferManager, keys, children, lockContext);
+
+        updateRoot(innerNode);
     }
 }

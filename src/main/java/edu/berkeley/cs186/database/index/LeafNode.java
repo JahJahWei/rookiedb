@@ -199,32 +199,30 @@ class LeafNode extends BPlusNode {
     public Optional<Pair<DataBox, Long>> bulkLoad(Iterator<Pair<DataBox, RecordId>> data,
             float fillFactor) {
         // TODO(proj2): implement
-        while (data.hasNext()) {
+        Optional<Pair<DataBox, Long>> result = Optional.empty();
+
+        int desired = (int)Math.ceil(metadata.getOrder() * 2 * fillFactor);
+        while (data.hasNext() && keys.size() < desired) {
             Pair<DataBox, RecordId> next = data.next();
-            DataBox key = next.getFirst();
-            RecordId rid = next.getSecond();
+            keys.add(next.getFirst());
+            rids.add(next.getSecond());
+        }
 
-            if ((keys.size() + 1) > (2 * metadata.getOrder() * fillFactor)) {
-                List<DataBox> keys = new ArrayList<>();
-                List<RecordId> rids = new ArrayList<>();
 
-                keys.add(key);
-                rids.add(rid);
-
-                LeafNode splitNode = new LeafNode(metadata, bufferManager, keys, rids, rightSibling, treeContext);
-                long pageNum = splitNode.getPage().getPageNum();
-
-                this.rightSibling = Optional.of(pageNum);
-
-                sync();
-                return Optional.of(new Pair<>(key, pageNum));
-            }
-
-            insertNode(key, rid);
+        if (data.hasNext()) {
+            Pair<DataBox, RecordId> next = data.next();
+            LeafNode leafNode = new LeafNode(metadata,
+                    bufferManager,
+                    Arrays.asList(next.getFirst()),
+                    Arrays.asList(next.getSecond()),
+                    rightSibling,
+                    treeContext);
+            result = Optional.of(new Pair<>(next.getFirst(), leafNode.getPage().getPageNum()));
         }
 
         sync();
-        return Optional.empty();
+
+        return result;
     }
 
     // See BPlusNode.remove.
