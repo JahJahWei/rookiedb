@@ -459,7 +459,7 @@ public class BPlusTree {
         @Override
         public boolean hasNext() {
             // TODO(proj2): implement
-            return (iterator != null && iterator.hasNext()) || nextNode.getRightSibling().isPresent();
+            return (iterator != null && iterator.hasNext()) || nextNode.hadRightSibling();
         }
 
         @Override
@@ -470,8 +470,12 @@ public class BPlusTree {
                     return iterator.next();
                 }
 
-                nextNode = nextNode.getRightSibling().get();
-                iterator = nextNode.scanAll();
+                nextNode = nextNode.getRightSibling().orElseThrow(NoSuchElementException::new);
+                if (key.isPresent()) {
+                    iterator = nextNode.scanGreaterEqual(key.get());
+                } else {
+                    iterator = nextNode.scanAll();
+                }
                 return next();
             }
 

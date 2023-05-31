@@ -217,6 +217,7 @@ class LeafNode extends BPlusNode {
                     Arrays.asList(next.getSecond()),
                     rightSibling,
                     treeContext);
+            this.rightSibling = Optional.of(leafNode.getPage().getPageNum());
             result = Optional.of(new Pair<>(next.getFirst(), leafNode.getPage().getPageNum()));
         }
 
@@ -486,6 +487,10 @@ class LeafNode extends BPlusNode {
         }
         keys.add(index, key);
         rids.add(index, rid);
+    }
+
+    public boolean hadRightSibling() {
+        return rightSibling.isPresent() && rightSibling.get() != -1;
     }
 
 }

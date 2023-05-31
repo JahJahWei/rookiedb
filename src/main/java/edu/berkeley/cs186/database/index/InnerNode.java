@@ -129,7 +129,7 @@ class InnerNode extends BPlusNode {
         // TODO(proj2): implement
         Optional<Pair<DataBox, Long>> result = Optional.empty();
         while (data.hasNext() && keys.size() <= metadata.getOrder() * 2) {
-            getChild(keys.size() - 1).bulkLoad(data, fillFactor).ifPresent(node -> insertNode(node, keys, children));
+            getChild(keys.size()).bulkLoad(data, fillFactor).ifPresent(node -> insertNode(node, keys, children));
         }
 
         if (keys.size() > 2 * metadata.getOrder()) {
