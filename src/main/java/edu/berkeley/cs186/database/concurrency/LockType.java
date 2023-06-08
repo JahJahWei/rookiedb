@@ -4,13 +4,35 @@ package edu.berkeley.cs186.database.concurrency;
  * Utility methods to track the relationships between different lock types.
  */
 public enum LockType {
-    S,   // shared
-    X,   // exclusive
-    IS,  // intention shared
-    IX,  // intention exclusive
-    SIX, // shared intention exclusive
-    NL;  // no lock held
+    S(2),   // shared
+    X(4),   // exclusive
+    IS(0),  // intention shared
+    IX(1),  // intention exclusive
+    SIX(3), // shared intention exclusive
+    NL(-1);  // no lock held
 
+    private int index;
+
+    LockType(int index) {
+        this.index = index;
+    }
+
+    /*
+     *     | NL  | IS  | IX  |  S  | SIX |  X
+     * ----+-----+-----+-----+-----+-----+-----
+     * NL  |  T  |  T  |  T  |  T  |  T  |  T
+     * ----+-----+-----+-----+-----+-----+-----
+     * IS  |  T  |  T  |  T  |  T  |     |
+     * ----+-----+-----+-----+-----+-----+-----
+     * IX  |  T  |  T  |  T  |  F  |     |
+     * ----+-----+-----+-----+-----+-----+-----
+     * S   |  T  |  T  |  F  |  T  |  F  |  F
+     * ----+-----+-----+-----+-----+-----+-----
+     * SIX |  T  |     |     |  F  |     |
+     * ----+-----+-----+-----+-----+-----+-----
+     * X   |  T  |     |     |  F  |     |  F
+     * ----+-----+-----+-----+-----+-----+-----
+     */
     private static final boolean[][] MATRIX = {
             {true, true, true, true, false},
             {true, true, false, false, false},
@@ -34,7 +56,7 @@ public enum LockType {
             return true;
         }
 
-        return MATRIX[getIndex(a)][getIndex(b)];
+        return MATRIX[a.index][b.index];
     }
 
     /**
@@ -121,14 +143,9 @@ public enum LockType {
         }
     }
 
-    private static int getIndex(LockType type) {
-        if (type == IS) return 0;
-        if (type == IX) return 1;
-        if (type == S) return 2;
-        if (type == SIX) return 3;
-        if (type == X) return 4;
-
-        return -1;
+    public void setIndex(int index) {
+        this.index = index;
     }
+
 }
 
